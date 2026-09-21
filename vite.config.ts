@@ -1,7 +1,19 @@
-import react from '@vitejs/plugin-react'
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite';
+import react from '@vitejs/plugin-react';
 
-// https://vite.dev/config/
-export default defineConfig({
-  plugins: [react()],
-})
+// #region Same-origin API connection
+// The browser requests /api from Vite. Vite forwards it unchanged to Spring,
+// including bearer headers. Production needs the equivalent reverse proxy.
+// Only VITE_ prefixed values are exposed to browser code; no server secrets belong there.
+// #endregion
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), '');
+  const proxy = {
+    '/api': { target: env.API_PROXY_TARGET || 'http://127.0.0.1:8080', changeOrigin: true },
+  };
+  return {
+    plugins: [react()],
+    server: { port: 5173, strictPort: true, proxy },
+    preview: { port: 4173, strictPort: true, proxy },
+  };
+});
